@@ -1,31 +1,53 @@
-PROGRAM = echo_server
+APPS = apps/tcp_echo \
+       apps/udp_echo \
+       apps/router
 
-OBJECTS = microps.o tcp.o udp.o icmp.o ip.o arp.o ethernet.o util.o dhcp.o
+TEST = test/raw_test \
+       test/ethernet_test \
+       test/slip_test \
+       test/arp_test
 
-CFLAGS  := $(CFLAGS) -g -W -Wall -Wno-unused-parameter 
+OBJS = util.o \
+       raw.o \
+       net.o \
+       ethernet.o \
+       slip.o \
+       arp.o \
+       ip.o \
+       icmp.o \
+       udp.o \
+       tcp.o \
+       dhcp.o \
+       microps.o
+
+CFLAGS := $(CFLAGS) -g -W -Wall -Wno-unused-parameter -I .
 
 ifeq ($(shell uname),Linux)
-	OBJECTS := $(OBJECTS) pkt.o
-	CFLAGS  := $(CFLAGS) -lpthread -pthread
+	OBJS := $(OBJS) raw_socket.o raw_tap.o
+	CFLAGS := $(CFLAGS) -lpthread -pthread -DHAVE_TAP
 endif
 
 ifeq ($(shell uname),Darwin)
-	OBJECTS := $(OBJECTS) bpf.o
+	OBJS := $(OBJS) raw_bpf.o
+#	OBJS := $(OBJS) raw_tap.o
+#	CFLAGS := $(CFLAGS) -DHAVE_TAP
 endif
-
 
 .SUFFIXES:
 .SUFFIXES: .c .o
 
 .PHONY: all clean
 
-all: $(PROGRAM)
+all: $(APPS) $(TEST)
 
-$(PROGRAM): % : %.o $(OBJECTS)
-	$(CC) $(CFLAGS) -o $@ $< $(OBJECTS) $(LDFLAGS)
+$(APPS): % : %.o $(OBJS)
+	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
+
+$(TEST): % : %.o $(OBJS)
+	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
 .c.o:
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	rm -rf $(PROGRAM) $(PROGRAM:=.o) $(OBJECTS)
+	rm -rf $(APPS) $(APPS:=.o) $(OBJS) $(TEST) $(TEST:=.o)

@@ -1,34 +1,72 @@
-microps
+microps (MICRO tcp/ip Protocol Stack)
 =======
 
-Micro TCP/IP Protocol Stack
+Tiny TCP/IP protcol stack for lecture.
 
-build:
+## Build
 
- $ make
+Build sample applications and test programs
 
+```
+$ make
+``` 
 
-usage:
+with debug output
 
- $ sudo ./echo_server device-name ethernet-addr ip-addr netmask default-gw
+```
+$ CFLAGS=-DDEBUG make
+```
 
+## Sample applications
 
-example (echo_server):
+TCP Echo server (with dynamic address)
 
- $ sudo ./echo_server eth0 02:00:00:00:00:01 192.168.0.100 255.255.255.0 192.168.0.1
+```
+ $ sudo apps/tcp_echo eth0 00:00:de:ad:be:ef dhcp
+```
 
+UDP Echo server (with static address)
 
-arp test:
+```
+ $ sudo apps/tcp_echo eth0 static 172.16.100.2 255.255.255.0 172.16.100.1
+```
 
- $ sudo arping 192.168.0.100
+Both application listen on port 7.
+ 
+## Test programs
 
+test/raw_test
+```
+$ sudo test/raw_test eth0
+```
 
-ping test:
+test/ethernet_test
+```
+$ sudo test/ethernet_test eth0
+```
 
- $ ping 192.168.0.100
+test/slip_test
+```
+$ sudo test/slip_test /dev/ttyXXX
+```
 
+test/arp_test
+```
+$ sudo test/arp_test eth0 00:00:de:ad:be:ef 172.16.100.2
+```
 
-echo test:
+## RAW devices
 
- $ nc -u 192.168.0.100 7
+You can select a Link-Level RAW device.
 
++ raw_socket
++ raw_tap
++ raw_bpf
+
+It can change with the `$RAW` variable in the Makefile.
+
+The default value: Linux is raw_socket and BSD is raw_bpf.
+
+## License
+
+microps is under the MIT License: See [LICENSE](./LICENSE) file.

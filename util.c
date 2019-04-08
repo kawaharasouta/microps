@@ -1,10 +1,11 @@
-#include "util.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 #include <limits.h>
 #include <ctype.h>
 #include <arpa/inet.h>
+#include "util.h"
 
 void
 hexdump (FILE *fp, void *data, size_t size) {
@@ -39,6 +40,37 @@ hexdump (FILE *fp, void *data, size_t size) {
     fprintf(fp, "+------+-------------------------------------------------+------------------+\n");
 }
 
+int
+fdputc (int fd, int c) {
+    ssize_t ret;
+
+RETRY:
+    ret = write(fd, &c, 1);
+    if (ret <= 0) {
+        if (ret == -1 && errno == EINTR) {
+            goto RETRY;
+        }
+        return EOF;
+    }
+    return c;
+}
+
+int
+fdgetc (int fd) {
+    int c;
+    ssize_t ret;
+
+RETRY:
+    ret = read(fd, &c, 1);
+    if (ret <= 0) {
+        if (ret == -1 && errno == EINTR) {
+            goto RETRY;
+        }
+        return EOF;
+    }
+    return c;
+}
+
 uint16_t
 cksum16 (uint16_t *data, uint16_t size, uint32_t init) {
     uint32_t sum;
@@ -70,6 +102,9 @@ queue_push (struct queue_head *queue, void *data, size_t size) {
     entry->data = data;
     entry->size = size;
     entry->next = NULL;
+    if (queue->tail) {
+        queue->tail->next = entry;
+    }
     queue->tail = entry;
     if (!queue->next) {
         queue->next = entry;
@@ -139,7 +174,7 @@ maskchk (uint32_t *mask, size_t size, size_t offset, size_t len) {
     so = offset / 32;
     sb = offset % 32;
     bl = (len > 32 - sb) ? 32 - sb : len;
-    if (mask[offset / 32] & ((0xffffffff >> (32 - bl)) << sb) ^ ((0xffffffff >> (32 - bl)) << sb)) {
+    if ((mask[offset / 32] & ((0xffffffff >> (32 - bl)) << sb)) ^ ((0xffffffff >> (32 - bl)) << sb)) {
         return 0;
     }
     len -= bl;
@@ -150,7 +185,7 @@ maskchk (uint32_t *mask, size_t size, size_t offset, size_t len) {
     }
     len -= (32 * idx);
     if (len) {
-        if (mask[idx + 1] & (0xffffffff >> (32 - len)) ^ (0xffffffff >> (32 - len))) {
+        if ((mask[idx + 1] & (0xffffffff >> (32 - len))) ^ (0xffffffff >> (32 - len))) {
             return 0;
         }
     }
